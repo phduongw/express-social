@@ -1,0 +1,9 @@
+express-resful-api/node_modules
+express-resful-api/package-lock.json
+express-resful-api/yarn.lock
+
+front-end/node_modules
+front-end/package-lock.json
+front-end/yarn.lock
+
+/**/.idea
