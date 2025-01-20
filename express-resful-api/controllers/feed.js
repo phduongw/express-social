@@ -2,14 +2,25 @@ const { validationResult } = require('express-validator')
 const fs = require('fs');
 const path = require('path');
 const Post = require('../models/Post');
+const User = require('../models/user');
 
 exports.getPosts = (req, res, next) => {
-    Post.find()
+    const { page } = req.query || 1;
+    const limit = 2;
+    let total;
+    Post.find().countDocuments()
+        .then(count => {
+            total = count;
+            return Post.find()
+                .skip((page - 1) * limit)
+                .limit(limit);
+        })
         .then(posts => {
             res.status(200)
                 .json({
                     message: 'Fetched posts successfully',
-                    posts
+                    posts,
+                    totalItems: total,
                 })
         })
         .catch(err => {
@@ -18,7 +29,7 @@ exports.getPosts = (req, res, next) => {
             }
 
             next(err);
-        })
+        });
 }
 
 exports.createNewPost = (req, res, next) => {
@@ -36,22 +47,34 @@ exports.createNewPost = (req, res, next) => {
     }
     const normalizedPath = req.file.path.replace(/\\/g, '/');
     const { title, content } = req.body;
+    const userId = req.userId;
+    let creator;
     const post = new Post({
         title,
         content,
         imageUrl: normalizedPath,
-        creator: {
-            name: 'Egan'
-        }
+        creator: userId
     })
 
     post.save()
         .then(result => {
             console.log(result);
+            return User.findById(userId)
+        })
+        .then(user => {
+            creator = user;
+            user.posts.push(post);
+            return user.save();
+        })
+        .then(result => {
             res.status(201)
                 .json({
                     message: 'Post created successfully.',
-                    post: result
+                    post: result,
+                    creator: {
+                        _id: creator._id,
+                        name: creator.name
+                    }
                 });
         })
         .catch(err => {
